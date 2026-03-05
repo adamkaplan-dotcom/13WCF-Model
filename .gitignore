@@ -1,0 +1,15 @@
+# Excel files
+*.xlsx
+*.xls
+*.xlsm
+
+# Temporary files
+*.tmp
+~$*
+
+# macOS
+.DS_Store
+.localized
+
+# Test files
+test.txt

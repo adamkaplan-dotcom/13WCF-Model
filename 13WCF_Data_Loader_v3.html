@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>13WCF Data Loader — Bullish</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+  :root {
+    --green: #18E589;
+    --green-dim: #23D389;
+    --blue: #2870E6;
+    --purple: #A456EA;
+    --yellow: #FDBD5B;
+    --red: #D04E59;
+    --bg-dark: #0A0A0A;
+    --bg-card: #141414;
+    --bg-card-hover: #1C1C1C;
+    --border: #2A2A2A;
+    --border-active: #18E589;
+    --text: #FFFFFF;
+    --text-muted: #9E9E9E;
+    --text-dim: #6B6B6B;
+    --surface: #1A1A1A;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #111 0%, var(--bg-dark) 100%);
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo-mark {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--green), var(--blue));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 18px; color: #000;
+  }
+  .header h1 {
+    font-size: 20px; font-weight: 600; letter-spacing: -0.3px;
+  }
+  .header h1 span { color: var(--green); }
+  .header-badge {
+    font-size: 11px; color: var(--text-muted);
+    background: var(--surface); padding: 4px 10px;
+    border-radius: 20px; border: 1px solid var(--border);
+  }
+
+  .main { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  .section-label {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--green); margin-bottom: 20px;
+  }
+
+  .upload-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .upload-row-source { margin-bottom: 8px; }
+
+  .upload-card {
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    background: var(--bg-card);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .upload-card:hover { background: var(--bg-card-hover); border-color: #444; }
+  .upload-card.has-file { border-style: solid; border-color: var(--green); background: rgba(24, 229, 137, 0.04); }
+  .upload-card.source-card { border-width: 2px; }
+  .upload-card.source-card.has-file { border-color: var(--blue); background: rgba(40, 112, 230, 0.04); }
+
+  .card-top { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+  .card-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .icon-source { background: rgba(40, 112, 230, 0.15); color: var(--blue); }
+  .icon-input { background: rgba(24, 229, 137, 0.12); color: var(--green); }
+
+  .card-title { font-weight: 600; font-size: 15px; }
+  .card-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .card-target {
+    font-size: 11px; color: var(--text-dim); margin-top: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .card-target .arrow { color: var(--green); }
+
+  .file-info {
+    display: none; margin-top: 12px; padding: 10px 14px;
+    background: rgba(255,255,255,0.03); border-radius: 8px;
+    font-size: 12px; color: var(--text-muted);
+    align-items: center; gap: 10px;
+  }
+  .has-file .file-info { display: flex; }
+  .file-info .fname { color: var(--text); font-weight: 500; flex: 1; }
+  .file-info .fsize { color: var(--text-dim); }
+  .file-info .remove-btn {
+    color: var(--red); cursor: pointer; font-size: 16px;
+    background: none; border: none; padding: 2px 6px;
+  }
+  .file-info .remove-btn:hover { color: #fff; }
+
+  .inputs-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .inputs-row { grid-template-columns: 1fr; } }
+
+  input[type="file"] { display: none; }
+
+  .actions { display: flex; justify-content: center; margin-top: 36px; }
+  .process-btn {
+    padding: 14px 48px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 600;
+    color: #000; background: var(--green);
+    border: none; border-radius: 10px;
+    cursor: pointer; transition: all 0.2s ease;
+    letter-spacing: 0.2px;
+  }
+  .process-btn:hover { background: #20f098; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(24,229,137,0.25); }
+  .process-btn:disabled {
+    background: var(--border); color: var(--text-dim);
+    cursor: not-allowed; transform: none; box-shadow: none;
+  }
+
+  .status-panel {
+    margin-top: 32px; display: none;
+    border: 1px solid var(--border); border-radius: 12px;
+    background: var(--bg-card); overflow: hidden;
+  }
+  .status-panel.visible { display: block; }
+  .status-header {
+    padding: 14px 20px; font-size: 13px; font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .status-header .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--yellow); animation: pulse 1.5s infinite;
+  }
+  .status-header.done .dot { background: var(--green); animation: none; }
+  .status-header.error .dot { background: var(--red); animation: none; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .progress-bar {
+    height: 4px; background: var(--border); overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--green), var(--blue));
+    width: 0%; transition: width 0.3s ease;
+  }
+
+  .log {
+    padding: 16px 20px; font-size: 12px;
+    color: var(--text-muted); line-height: 1.8;
+    max-height: 300px; overflow-y: auto;
+    font-family: 'DM Sans', monospace;
+  }
+  .log .step { display: flex; align-items: flex-start; gap: 8px; }
+  .log .check { color: var(--green); }
+  .log .warn { color: var(--yellow); }
+  .log .err { color: var(--red); }
+
+  .summary {
+    display: none; margin-top: 24px;
+    grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  .summary.visible { display: grid; }
+  .summary-card {
+    padding: 18px 20px; border-radius: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+  }
+  .summary-card .label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .summary-card .value { font-size: 28px; font-weight: 700; color: var(--green); }
+  .summary-card .detail { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  .download-area { display: none; margin-top: 24px; text-align: center; }
+  .download-area.visible { display: block; }
+  .download-btn {
+    padding: 14px 40px; font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 600;
+    color: #000; background: linear-gradient(135deg, var(--green), var(--blue));
+    border: none; border-radius: 10px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .download-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(24,229,137,0.3); }
+
+  .footer {
+    text-align: center; margin-top: 60px;
+    font-size: 11px; color: var(--text-dim);
+    padding-bottom: 40px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo-mark">B</div>
+    <h1>13WCF <span>Data Loader</span> <small style="font-size: 12px; color: var(--text-muted);">v3.0 (Memory Optimized)</small></h1>
+  </div>
+  <div class="header-badge">Treasury &amp; FP&amp;A</div>
+</div>
+
+<div class="main">
+
+  <div class="section-label">Source File</div>
+  <div class="upload-grid upload-row-source">
+    <div class="upload-card source-card" id="drop-source" onclick="document.getElementById('file-source').click()">
+      <input type="file" id="file-source" accept=".xlsx,.xls" onchange="handleFile(this,'source')">
+      <div class="card-top">
+        <div class="card-icon icon-source">📊</div>
+        <div>
+          <div class="card-title">13WCF Model</div>
+          <div class="card-subtitle">Bullish - 13WCF - DRAFT .xlsx</div>
+        </div>
+      </div>
+      <div class="card-target">The master workbook that will receive all input data</div>
+      <div class="file-info">
+        <span class="fname" id="fname-source"></span>
+        <span class="fsize" id="fsize-source"></span>
+        <button class="remove-btn" onclick="event.stopPropagation(); removeFile('source')">&times;</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label">Input Files</div>
+  <div class="upload-grid inputs-row">
+    <div class="upload-card" id="drop-settlement" onclick="document.getElementById('file-settlement').click()">
+      <input type="file" id="file-settlement" accept=".xlsx,.xls" onchange="handleFile(this,'settlement')">
+      <div class="card-top">
+        <div class="card-icon icon-input">💳</div>
+        <div>
+          <div class="card-title">Settlement Details</div>
+          <div class="card-subtitle">Settlement_details.xlsx</div>
+        </div>
+      </div>
+      <div class="card-target"><span class="arrow">→</span> OPEX - Weekly Settlement Run</div>
+      <div class="file-info">
+        <span class="fname" id="fname-settlement"></span>
+        <span class="fsize" id="fsize-settlement"></span>
+        <button class="remove-btn" onclick="event.stopPropagation(); removeFile('settlement')">&times;</button>
+      </div>
+    </div>
+
+    <div class="upload-card" id="drop-supplier" onclick="document.getElementById('file-supplier').click()">
+      <input type="file" id="file-supplier" accept=".xlsx,.xls" onchange="handleFile(this,'supplier')">
+      <div class="card-top">
+        <div class="card-icon icon-input">📦</div>
+        <div>
+          <div class="card-title">Supplier Invoices</div>
+          <div class="card-subtitle">Find_Supplier_Invoices_-_Devi.xlsx</div>
+        </div>
+      </div>
+      <div class="card-target"><span class="arrow">→</span> OPEX - AP</div>
+      <div class="file-info">
+        <span class="fname" id="fname-supplier"></span>
+        <span class="fsize" id="fsize-supplier"></span>
+        <button class="remove-btn" onclick="event.stopPropagation(); removeFile('supplier')">&times;</button>
+      </div>
+    </div>
+
+    <div class="upload-card" id="drop-customer" onclick="document.getElementById('file-customer').click()">
+      <input type="file" id="file-customer" accept=".xlsx,.xls" onchange="handleFile(this,'customer')">
+      <div class="card-top">
+        <div class="card-icon icon-input">🧾</div>
+        <div>
+          <div class="card-title">Customer Invoices</div>
+          <div class="card-subtitle">Customer_Invoice_Details.xlsx</div>
+        </div>
+      </div>
+      <div class="card-target"><span class="arrow">→</span> AR - Customer Invoice Detail</div>
+      <div class="file-info">
+        <span class="fname" id="fname-customer"></span>
+        <span class="fsize" id="fsize-customer"></span>
+        <button class="remove-btn" onclick="event.stopPropagation(); removeFile('customer')">&times;</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="process-btn" id="processBtn" disabled onclick="processFiles()">Load Data into 13WCF</button>
+  </div>
+
+  <div class="status-panel" id="statusPanel">
+    <div class="status-header" id="statusHeader">
+      <div class="dot"></div>
+      <span id="statusText">Processing...</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="summary" id="summary">
+    <div class="summary-card">
+      <div class="label">Settlement Run</div>
+      <div class="value" id="sum-sr">0</div>
+      <div class="detail">rows loaded</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Supplier Invoices</div>
+      <div class="value" id="sum-ap">0</div>
+      <div class="detail">rows loaded</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Customer Invoices</div>
+      <div class="value" id="sum-ar">0</div>
+      <div class="detail">rows loaded</div>
+    </div>
+  </div>
+
+  <div class="download-area" id="downloadArea">
+    <button class="download-btn" id="downloadBtn">Download Updated 13WCF</button>
+  </div>
+
+  <div class="footer">
+    Bullish Treasury &amp; FP&amp;A — 13 Week Cash Flow Model Data Loader v3.0
+  </div>
+</div>
+
+<script>
+const files = { source: null, settlement: null, supplier: null, customer: null };
+const buffers = { source: null, settlement: null, supplier: null, customer: null };
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+function handleFile(input, key) {
+  const file = input.files[0];
+  if (!file) return;
+  files[key] = file;
+  document.getElementById('drop-' + key).classList.add('has-file');
+  document.getElementById('fname-' + key).textContent = file.name;
+  document.getElementById('fsize-' + key).textContent = formatSize(file.size);
+
+  const reader = new FileReader();
+  reader.onload = (e) => { buffers[key] = new Uint8Array(e.target.result); };
+  reader.readAsArrayBuffer(file);
+  checkReady();
+}
+
+function removeFile(key) {
+  files[key] = null;
+  buffers[key] = null;
+  document.getElementById('file-' + key).value = '';
+  document.getElementById('drop-' + key).classList.remove('has-file');
+  checkReady();
+}
+
+function checkReady() {
+  document.getElementById('processBtn').disabled = !(files.source && files.settlement && files.supplier && files.customer);
+}
+
+['source','settlement','supplier','customer'].forEach(key => {
+  const card = document.getElementById('drop-' + key);
+  card.addEventListener('dragover', e => { e.preventDefault(); card.style.borderColor = '#18E589'; });
+  card.addEventListener('dragleave', () => { card.style.borderColor = ''; });
+  card.addEventListener('drop', e => {
+    e.preventDefault(); card.style.borderColor = '';
+    const f = e.dataTransfer.files[0];
+    if (f) {
+      const input = document.getElementById('file-' + key);
+      const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files;
+      handleFile(input, key);
+    }
+  });
+});
+
+function log(msg, type) {
+  const el = document.getElementById('log');
+  const prefix = type === 'ok' ? '<span class="check">✓</span>' :
+                 type === 'warn' ? '<span class="warn">⚠</span>' :
+                 type === 'err' ? '<span class="err">✗</span>' : '•';
+  el.innerHTML += `<div class="step">${prefix} ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function setProgress(pct) {
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+function adjustFormula(formula, offset) {
+  if (!formula) return '';
+  return formula.replace(/(\$?[A-Z]{1,3})(\$?)(\d+)/g, (m, col, abs, row) => {
+    return abs === '$' ? m : col + (parseInt(row) + offset);
+  });
+}
+
+async function processFiles() {
+  const btn = document.getElementById('processBtn');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+
+  const panel = document.getElementById('statusPanel');
+  panel.classList.add('visible');
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('statusHeader').className = 'status-header';
+  document.getElementById('statusText').textContent = 'Processing...';
+  document.getElementById('summary').classList.remove('visible');
+  document.getElementById('downloadArea').classList.remove('visible');
+  setProgress(0);
+
+  await new Promise(r => setTimeout(r, 100));
+
+  try {
+    if (!buffers.source || !buffers.settlement || !buffers.supplier || !buffers.customer) {
+      throw new Error('Please wait for all files to finish loading');
+    }
+
+    setProgress(10);
+    log('Loading source workbook...', 'ok');
+    const wb = XLSX.read(buffers.source, { type: 'array', cellFormula: false, sheetStubs: false });
+
+    setProgress(20);
+    log('Processing Settlement Run...', 'ok');
+    const wbSettle = XLSX.read(buffers.settlement, { type: 'array', cellFormula: false, sheetStubs: false });
+    const wsSettle = wbSettle.Sheets[wbSettle.SheetNames[0]];
+    const ws1 = wb.Sheets['OPEX - Weekly Settlement Run'];
+    if (!ws1) throw new Error('Sheet "OPEX - Weekly Settlement Run" not found');
+
+    const settleData = XLSX.utils.sheet_to_json(wsSettle, { header: 1, defval: null, raw: false });
+    let rowsPasted1 = 0;
+
+    for (let r = 2; r < settleData.length; r++) {
+      if (!settleData[r] || !settleData[r].some(v => v)) continue;
+      for (let c = 0; c <= 43; c++) {
+        const addr = XLSX.utils.encode_cell({r: 8 + rowsPasted1, c});
+        ws1[addr] = settleData[r][c] ? { t: 's', v: settleData[r][c] } : undefined;
+      }
+      rowsPasted1++;
+      if (rowsPasted1 % 100 === 0) await new Promise(r => setTimeout(r, 0));
+    }
+    log(`Settlement: ${rowsPasted1} rows loaded`, 'ok');
+    settleData.length = 0;
+
+    setProgress(50);
+    log('Processing Supplier Invoices...', 'ok');
+    const wbSupplier = XLSX.read(buffers.supplier, { type: 'array', cellFormula: false, sheetStubs: false });
+    const wsSupplier = wbSupplier.Sheets[wbSupplier.SheetNames[0]];
+    const ws2 = wb.Sheets['OPEX - AP'];
+    if (!ws2) throw new Error('Sheet "OPEX - AP" not found');
+
+    const supplierData = XLSX.utils.sheet_to_json(wsSupplier, { header: 1, defval: null, raw: false });
+    let rowsPasted2 = 0;
+
+    for (let r = 2; r < supplierData.length; r++) {
+      if (!supplierData[r] || !supplierData[r].some(v => v)) continue;
+      for (let c = 0; c <= 38; c++) {
+        const addr = XLSX.utils.encode_cell({r: 12 + rowsPasted2, c});
+        ws2[addr] = supplierData[r][c] ? { t: 's', v: supplierData[r][c] } : undefined;
+      }
+      rowsPasted2++;
+      if (rowsPasted2 % 100 === 0) await new Promise(r => setTimeout(r, 0));
+    }
+    log(`Supplier: ${rowsPasted2} rows loaded`, 'ok');
+    supplierData.length = 0;
+
+    setProgress(75);
+    log('Processing Customer Invoices...', 'ok');
+    const wbCustomer = XLSX.read(buffers.customer, { type: 'array', cellFormula: false, sheetStubs: false });
+    const wsCustomer = wbCustomer.Sheets[wbCustomer.SheetNames[0]];
+    const ws3 = wb.Sheets['AR - Customer Invoice Detail'];
+    if (!ws3) throw new Error('Sheet "AR - Customer Invoice Detail" not found');
+
+    const customerData = XLSX.utils.sheet_to_json(wsCustomer, { header: 1, defval: null, raw: false });
+    let rowsPasted3 = 0;
+
+    for (let r = 2; r < customerData.length; r++) {
+      if (!customerData[r] || !customerData[r].some(v => v)) continue;
+      for (let c = 0; c <= 16; c++) {
+        const addr = XLSX.utils.encode_cell({r: 7 + rowsPasted3, c});
+        ws3[addr] = customerData[r][c] ? { t: 's', v: customerData[r][c] } : undefined;
+      }
+      rowsPasted3++;
+      if (rowsPasted3 % 100 === 0) await new Promise(r => setTimeout(r, 0));
+    }
+    log(`Customer: ${rowsPasted3} rows loaded`, 'ok');
+    customerData.length = 0;
+
+    setProgress(90);
+    log('Generating output file...', 'ok');
+    const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbOut], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+    const downloadBtn = document.getElementById('downloadBtn');
+    downloadBtn.onclick = () => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const ts = new Date().toISOString().slice(0,10).replace(/-/g,'');
+      a.href = url;
+      a.download = `Bullish_13WCF_Updated_${ts}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    setProgress(100);
+    log('Complete!', 'ok');
+    document.getElementById('statusHeader').className = 'status-header done';
+    document.getElementById('statusText').textContent = 'Complete';
+
+    document.getElementById('sum-sr').textContent = rowsPasted1.toLocaleString();
+    document.getElementById('sum-ap').textContent = rowsPasted2.toLocaleString();
+    document.getElementById('sum-ar').textContent = rowsPasted3.toLocaleString();
+    document.getElementById('summary').classList.add('visible');
+    document.getElementById('downloadArea').classList.add('visible');
+
+  } catch (err) {
+    log(`Error: ${err.message}`, 'err');
+    document.getElementById('statusHeader').className = 'status-header error';
+    document.getElementById('statusText').textContent = 'Error';
+    console.error(err);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Load Data into 13WCF';
+}
+</script>
+</body>
+</html>
